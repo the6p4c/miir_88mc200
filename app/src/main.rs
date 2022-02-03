@@ -1,33 +1,46 @@
 #![no_main]
 #![no_std]
+use cortex_m::peripheral::syst::SystClkSource;
+use cortex_m::peripheral::SYST;
 use cortex_m_rt::entry;
-use marvell_88mc200 as _;
+use marvell_88mc200;
 
 extern crate panic_halt;
 
-macro_rules! ptr {
-    ($name:ident = $value:expr) => {
-        const $name: *mut u32 = $value as *mut u32;
+fn bad_delay(syst: &mut SYST, t_ms: usize) {
+    syst.clear_current();
+
+    for _ in 0..t_ms {
+        while !syst.has_wrapped() {}
     }
 }
 
-ptr!(GPSR0 = 0x46060018);
-ptr!(GPCR0 = 0x46060024);
-ptr!(GSDR0 = 0x46060054);
-
 #[entry]
 fn main() -> ! {
+    const GPIO_28: u32 = 1 << 28;
+    const GPIO_29: u32 = 1 << 29;
+
+    let cp = cortex_m::Peripherals::take().unwrap();
+    let dp = marvell_88mc200::Peripherals::take().unwrap();
+
+    let mut syst = cp.SYST;
+    let gpio = dp.GPIO;
+
+    syst.set_clock_source(SystClkSource::Core);
+    syst.set_reload(200_000);
+    syst.enable_counter();
+
     unsafe {
-        GSDR0.write_volatile(1 << 28);
-        GSDR0.write_volatile(1 << 29);
+        gpio.gsdr0.write(|w| w.bits(GPIO_28 | GPIO_29));
 
         loop {
-            GPSR0.write_volatile(1 << 29);
-            GPCR0.write_volatile(1 << 28);
-            for _ in 0..1000000 {}
-            GPCR0.write_volatile(1 << 29);
-            GPSR0.write_volatile(1 << 28);
-            for _ in 0..1000000 {}
+            gpio.gpsr0.write(|w| w.bits(GPIO_28));
+            gpio.gpcr0.write(|w| w.bits(GPIO_29));
+            bad_delay(&mut syst, 1000);
+
+            gpio.gpcr0.write(|w| w.bits(GPIO_28));
+            gpio.gpsr0.write(|w| w.bits(GPIO_29));
+            bad_delay(&mut syst, 1000);
         }
     }
 }
