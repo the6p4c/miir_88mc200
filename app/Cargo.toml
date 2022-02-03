@@ -10,3 +10,6 @@ panic-halt = "0.2.0"
 
 [dependencies.marvell-88mc200]
 path = "../marvell-88mc200"
+
+[build-dependencies]
+cc = "1.0.72"
