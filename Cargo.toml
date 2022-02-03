@@ -1,0 +1,5 @@
+[workspace]
+members = [
+	"app",
+	"marvell-88mc200"
+]

@@ -1,0 +1,5 @@
+# svd2rust generated files
+src/
+build.rs
+device.x
+lib.rs
